@@ -17,7 +17,7 @@ public class CropImageMinified extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         AnchorPane root = new AnchorPane();
-        root.getChildren().addAll(this.cropImage(600, 700, "https://filedn.com/ltOdFv1aqz1YIFhf4gTY8D7/ingus-info/BLOGS/Photography-stocks3/stock-photography-slider.jpg"));
+        root.getChildren().addAll(this.cropImage(600, 200, "https://filedn.com/ltOdFv1aqz1YIFhf4gTY8D7/ingus-info/BLOGS/Photography-stocks3/stock-photography-slider.jpg"));
         Scene scene = new Scene(root, 800, 800);
         stage.setScene(scene);
         stage.show();
@@ -33,13 +33,13 @@ public class CropImageMinified extends Application {
         imageView.setFitWidth(width);
         imageView.setFitHeight(height);
         imageView.setPreserveRatio(true);
-        imageView.setStyle("-fx-background-color: blue");
         
         double viewportWidth = this.getViewportWidth(img, width, height);
         double viewportHeight = this.getViewportHeight(img, width, height);
         double centerX = viewportWidth/2;
         double centerY = img.getHeight()/2-viewportHeight/2;
         imageView.setViewport(new Rectangle2D(centerX, centerY, viewportWidth, viewportHeight));
+        
         ObjectProperty<Point2D> mouseDown = new SimpleObjectProperty<>();
         imageView.setOnMousePressed(e -> {
             Point2D mousePress = imageViewToImage(imageView, new Point2D(e.getX(), e.getY()));
@@ -49,6 +49,23 @@ public class CropImageMinified extends Application {
             Point2D dragPoint = imageViewToImage(imageView, new Point2D(e.getX(), e.getY()));
             shift(imageView, dragPoint.subtract(mouseDown.get()));
             mouseDown.set(imageViewToImage(imageView, new Point2D(e.getX(), e.getY())));
+        });
+        final int MIN_PIXELS = 100;
+        imageView.setOnScroll(e -> {
+            double delta = e.getDeltaY();
+            Rectangle2D viewport = imageView.getViewport();
+            
+            double scale = clamp(Math.pow(1.01, delta), Math.min(MIN_PIXELS/viewport.getWidth(), MIN_PIXELS/viewport.getHeight()), Math.max(viewportWidth/viewport.getWidth(), viewportHeight/viewport.getHeight()));
+            double newWidth = viewport.getWidth() * scale;
+            double newHeight = viewport.getHeight() * scale;
+            
+            Point2D mouse = imageViewToImage(imageView, new Point2D(e.getX(), e.getY()));
+            double newMinX = clamp(mouse.getX() - (mouse.getX() - viewport.getMinX()) * scale,
+                    0, img.getWidth() - newWidth);
+            double newMinY = clamp(mouse.getY() - (mouse.getY() - viewport.getMinY()) * scale,
+                    0, img.getHeight() - newHeight);
+
+            imageView.setViewport(new Rectangle2D(newMinX, newMinY, newWidth, newHeight));
         });
         
         //imageFrame
@@ -102,7 +119,6 @@ public class CropImageMinified extends Application {
         imageView.setViewport(new Rectangle2D(minX, minY, viewport.getWidth(), viewport.getHeight()));
     }
     private double clamp(double value, double min, double max) {
-
         if (value < min)
             return min;
         if (value > max)
@@ -116,8 +132,6 @@ public class CropImageMinified extends Application {
         double yProportion = imageViewCoordinates.getY() / imageView.getBoundsInLocal().getHeight();
 
         Rectangle2D viewport = imageView.getViewport();
-        return new Point2D(
-                viewport.getMinX() + xProportion * viewport.getWidth(),
-                viewport.getMinY() + yProportion * viewport.getHeight());
+        return new Point2D(viewport.getMinX() + xProportion * viewport.getWidth(), viewport.getMinY() + yProportion * viewport.getHeight());
     }
 }
