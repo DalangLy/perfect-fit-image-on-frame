@@ -68,6 +68,12 @@ public class CropImageMinified extends Application {
             imageView.setViewport(new Rectangle2D(newMinX, newMinY, newWidth, newHeight));
         });
         
+        imageView.setOnMouseClicked(e -> {
+            if (e.getClickCount() == 2) {
+                imageView.setViewport(new Rectangle2D(centerX, centerY, viewportWidth, viewportHeight));
+            }
+        });
+        
         //imageFrame
         StackPane frame = new StackPane();
         frame.setAlignment(Pos.CENTER);
