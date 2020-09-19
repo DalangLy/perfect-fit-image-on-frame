@@ -1,6 +1,9 @@
 package cropimageminified;
 
 import javafx.application.Application;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.layout.*;
@@ -37,7 +40,17 @@ public class CropImageMinified extends Application {
         double centerX = viewportWidth/2;
         double centerY = img.getHeight()/2-viewportHeight/2;
         imageView.setViewport(new Rectangle2D(centerX, centerY, viewportWidth, viewportHeight));
-
+        ObjectProperty<Point2D> mouseDown = new SimpleObjectProperty<>();
+        imageView.setOnMousePressed(e -> {
+            Point2D mousePress = imageViewToImage(imageView, new Point2D(e.getX(), e.getY()));
+            mouseDown.set(mousePress);
+        });
+        imageView.setOnMouseDragged(e -> {
+            Point2D dragPoint = imageViewToImage(imageView, new Point2D(e.getX(), e.getY()));
+            shift(imageView, dragPoint.subtract(mouseDown.get()));
+            mouseDown.set(imageViewToImage(imageView, new Point2D(e.getX(), e.getY())));
+        });
+        
         //imageFrame
         StackPane frame = new StackPane();
         frame.setAlignment(Pos.CENTER);
@@ -70,5 +83,41 @@ public class CropImageMinified extends Application {
     }
     private double getShortestImageDimension(Image image){
         return image.getWidth()>image.getHeight()?image.getHeight():image.getWidth();
+    }
+    
+    // shift the viewport of the imageView by the specified delta, clamping so
+    // the viewport does not move off the actual image:
+    private void shift(ImageView imageView, Point2D delta) {
+        Rectangle2D viewport = imageView.getViewport();
+
+        double width = imageView.getImage().getWidth() ;
+        double height = imageView.getImage().getHeight() ;
+
+        double maxX = width - viewport.getWidth();
+        double maxY = height - viewport.getHeight();
+
+        double minX = clamp(viewport.getMinX() - delta.getX(), 0, maxX);
+        double minY = clamp(viewport.getMinY() - delta.getY(), 0, maxY);
+
+        imageView.setViewport(new Rectangle2D(minX, minY, viewport.getWidth(), viewport.getHeight()));
+    }
+    private double clamp(double value, double min, double max) {
+
+        if (value < min)
+            return min;
+        if (value > max)
+            return max;
+        return value;
+    }
+    
+    // convert mouse coordinates in the imageView to coordinates in the actual image:
+    private Point2D imageViewToImage(ImageView imageView, Point2D imageViewCoordinates) {
+        double xProportion = imageViewCoordinates.getX() / imageView.getBoundsInLocal().getWidth();
+        double yProportion = imageViewCoordinates.getY() / imageView.getBoundsInLocal().getHeight();
+
+        Rectangle2D viewport = imageView.getViewport();
+        return new Point2D(
+                viewport.getMinX() + xProportion * viewport.getWidth(),
+                viewport.getMinY() + yProportion * viewport.getHeight());
     }
 }
